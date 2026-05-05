@@ -6,22 +6,20 @@
 # Gerard can import his details into this file to match his local setup
 import config
 
-# first set up connection to MySQL
+# first set up connection to SQL servers and neo4j using details from config.py
 import mysql.connector
+from neo4j import GraphDatabase
 
 # connect to servers using details from config.py
 mysql_conn = mysql.connector.connect(
-    host="config.mysql_host",
+    host=config.mysql_host,
     port=config.mysql_port,
-    user="config.mysql_user",
-    password="config.mysql_password",
-    database="config.mysql_database"
+    user=config.mysql_user,
+    password=config.mysql_password,
+    database=config.mysql_database
 )
 # create cursor for MySQL connection
 mysql_cursor = mysql_conn.cursor()
-
-# now set up connection to Neo4j
-from neo4j import GraphDatabase 
 
 # import details from config.py and create driver for Neo4j connection
 # see https://neo4j.com/docs/api/python-driver/current/ 
@@ -29,25 +27,38 @@ neo4j_driver = GraphDatabase.driver(
     config.neo4j_uri, auth=(config.neo4j_user, config.neo4j_password)
 )
 
-#STEP 2 CREATE USER MENU
-# adapt from https://learn.modernagecoders.com/blog/how-to-build-menu-driven-program-in-python 
-import mysql.connector
-from neo4j import GraphDatabase
 
-# ── Database connections ──────────────────────────────────────────
-mysql_conn = mysql.connector.connect(
-    host="localhost",
-    port=3308,
-    user="root",
-    password="yourpassword",  # replace with your root password
-    database="appdbproj"
-)
-mysql_cursor = mysql_conn.cursor()
+# STEP 2: start defining functions before they're called by main menu
 
-neo4j_driver = GraphDatabase.driver(
-    "neo4j://127.0.0.1:7687",
-    auth=("neo4j", "yourpassword")  # replace with your Neo4j password
-)
+# STEP 2.1: CREATE VIEW SPEAKER FUNCTION
+
+def view_speakers():
+    # user will input a search of a name
+    search = input("Enter speaker name : ")
+    # squirly brackets are used to format the printed string with the user output. 
+    print(f"Session Details For : {search}")
+    print("-------------------")
+
+    # now define the query to the sql db. the wildcard is a placeholder for whatever searh is entered by user. see https://www.w3schools.com/sql/sql_like.asp
+    query = """
+        Select s.speakerName, s.sessionTitle, r.roomName
+        from session as s
+        left join room as r on s.roomID = r.roomID
+        where s.speakerName like %s
+    """
+    # replace the wildcard with user input and execute the query.adopted from https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor-execute.html 
+    mysql_cursor.execute(query, (f"%{search}%",))
+    # fetch all the results from the query: https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlcursor-fetchall.html 
+    results = mysql_cursor.fetchall()
+
+# if there are no results, print a message to the user. otherwise, print the results.
+# this is a pythonic waty to check if a list is empty.https://www.geeksforgeeks.org/python/python-if-with-not-operator/ 
+    if not results:
+        print("No speakers found of that name")
+# otherwise print the columns returned by the query.     
+    else:
+        for speakerName, sessionTitle, roomName in results:
+            print(f"{speakerName} | {sessionTitle} | {roomName}")
 
 # STEP 2: CREATE USER MENU
 # ADAPT FROMED: https://learn.modernagecoders.com/blog/how-to-build-menu-driven-program-in-python 
