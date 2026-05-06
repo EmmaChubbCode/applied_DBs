@@ -60,7 +60,60 @@ def view_speakers():
         for speakerName, sessionTitle, roomName in results:
             print(f"{speakerName} | {sessionTitle} | {roomName}")
 
-# STEP 2: CREATE USER MENU
+# STEP 2.1: Attendees by company function
+
+def view_attendees_by_company():
+    # start a loop because the user keeps getting asked if they enter one that doesnt exist.
+    while True:
+        # user will input a search of a company name
+        company_id_input = input("Enter Company ID : ")
+    # check the input is valid (>0 and only digits allowed)
+        if not company_id_input.isdigit() or int(company_id_input) <= 0:
+            print("Please enter a valid company ID (number greater than 0)")
+            continue
+        # input makes everything string but we need int.
+        company_id = int(company_id_input)
+
+        # i need to check the company id exists in te db
+        mysql_cursor.execute("SELECT companyID FROM company WHERE companyID = %s", (company_id,))
+       # company is whatever tuple is returned by the query
+        company = mysql_cursor.fetchone()
+        # if company is none, the company id isnt in there. print error statement from spec.
+        if not company:
+            print(f"Company with ID  {company_id}  doesn't exist")
+           
+            continue
+        # otherwise we have a valid company id. just take the first index of the tuple otherwise it looks like "'CloudSprint', "
+        company_name = company[0]
+
+        # print company name and the word attendees.
+        print(f"{company_name}  Attendees")
+
+        # build thr query to get attendees and their sessions.
+        # use inner join because we only want to return attendees that have registered. 
+        query = """
+        select a.attendeeName, a.attendeeDOB, s.sessionTitle, s.speakerName, s.sessionDate, r.roomName
+            from attendee a
+            inner join registration reg ON a.attendeeID = reg.attendeeID
+            inner join session s ON reg.sessionID = s.sessionID
+            inner join room r ON s.roomID = r.roomID
+            where a.attendeeCompanyID = %s
+            order by a.attendeeName
+        """
+        mysql_cursor.execute(query, (company_id,))
+        results = mysql_cursor.fetchall()
+        
+        # if no attendees found, print a message to the user
+        if not results:
+            print(f"No attendees found for  {company_name}")
+            continue
+        
+        # otherwise print the results
+        for attendeeName, attendeeDOB, sessionTitle, speakerName, sessionDate, roomName in results:
+            print(f"{attendeeName} | {attendeeDOB} | {sessionTitle} | {speakerName} | {sessionDate} | {roomName}")
+        break
+
+# STEP 3: CREATE USER MENU
 # ADAPT FROMED: https://learn.modernagecoders.com/blog/how-to-build-menu-driven-program-in-python 
 def main():
     # use infinity loops to keep showing menu until user exits
