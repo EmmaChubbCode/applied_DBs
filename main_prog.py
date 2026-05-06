@@ -75,7 +75,7 @@ def view_attendees_by_company():
         company_id = int(company_id_input)
 
         # i need to check the company id exists in te db
-        mysql_cursor.execute("SELECT companyID FROM company WHERE companyID = %s", (company_id,))
+        mysql_cursor.execute("SELECT companyName FROM company WHERE companyID = %s", (company_id,))
        # company is whatever tuple is returned by the query
         company = mysql_cursor.fetchone()
         # if company is none, the company id isnt in there. print error statement from spec.
@@ -83,6 +83,7 @@ def view_attendees_by_company():
             print(f"Company with ID  {company_id}  doesn't exist")
            
             continue
+
         # otherwise we have a valid company id. just take the first index of the tuple otherwise it looks like "'CloudSprint', "
         company_name = company[0]
 
