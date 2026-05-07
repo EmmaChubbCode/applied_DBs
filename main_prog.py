@@ -114,6 +114,32 @@ def view_attendees_by_company():
             print(f"{attendeeName} | {attendeeDOB} | {sessionTitle} | {speakerName} | {sessionDate} | {roomName}")
         break
 
+# add new attendee function
+def add_new_attendee():
+    print("\nAdd New Attendee")
+    print("----------------")
+
+    # user input as per the spec
+    name = input("Name : ")
+    dob = input("DOB : ")
+    gender = input("Gender : ")
+    CompanyID = input("Company ID : ")
+
+    # check for whether the attendee id is already there. 
+    mysql_cursor.execute("SELECT attendeeID FROM attendee WHERE attendeeID = %s", (attendee_id,))
+    # the opposite pof if not - check if it returns a value. 
+    if mysql_cursor.fetchone():
+    print(f"*** ERROR *** Attendee ID: {attendee_id} already exists")
+    return
+
+    # check for validity of gender
+       # validate gender first before hitting the database
+    if gender not in ("Male", "Female"):
+        print("*** ERROR *** Gender must be Male/Female")
+        return
+
+
+
 # STEP 3: CREATE USER MENU
 # ADAPT FROMED: https://learn.modernagecoders.com/blog/how-to-build-menu-driven-program-in-python 
 def main():
