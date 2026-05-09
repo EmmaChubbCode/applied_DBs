@@ -60,7 +60,7 @@ def view_speakers():
         for speakerName, sessionTitle, roomName in results:
             print(f"{speakerName} | {sessionTitle} | {roomName}")
 
-# STEP 2.1: Attendees by company function
+# STEP 2.2: Attendees by company function
 
 def view_attendees_by_company():
     # start a loop because the user keeps getting asked if they enter one that doesnt exist.
@@ -114,23 +114,24 @@ def view_attendees_by_company():
             print(f"{attendeeName} | {attendeeDOB} | {sessionTitle} | {speakerName} | {sessionDate} | {roomName}")
         break
 
-# add new attendee function
+# Step 2.3: add new attendee function
 def add_new_attendee():
     print("\nAdd New Attendee")
     print("----------------")
 
     # user input as per the spec
+    attendee_id = input("Attendee ID : ")
     name = input("Name : ")
     dob = input("DOB : ")
     gender = input("Gender : ")
-    CompanyID = input("Company ID : ")
+    company_id = input("Company ID : ")
 
     # check for whether the attendee id is already there. 
     mysql_cursor.execute("SELECT attendeeID FROM attendee WHERE attendeeID = %s", (attendee_id,))
     # the opposite pof if not - check if it returns a value. 
     if mysql_cursor.fetchone():
-    print(f"*** ERROR *** Attendee ID: {attendee_id} already exists")
-    return
+        print(f"*** ERROR *** Attendee ID: {attendee_id} already exists")
+        return
 
     # check for validity of gender
        # validate gender first before hitting the database
@@ -138,8 +139,31 @@ def add_new_attendee():
         print("*** ERROR *** Gender must be Male/Female")
         return
 
+    # check company exists. check all the company IDs from the db, if the entered on isnt in that list, it isnt a valid one. 
+    mysql_cursor.execute("SELECT companyID FROM company WHERE companyID = %s", (company_id,))
+    if not mysql_cursor.fetchone():
+        print(f"*** ERROR *** Company ID: {company_id} does not exist")
+        return
+    
+    # now start writing the query for the db
+    # adapted from Ger's notes Topic 10
+    query = """
+        INSERT INTO attendee (attendeeID, attendeeName, attendeeDOB, attendeeGender, attendeeCompanyID)
+        VALUES (%s, %s, %s, %s, %s)
+    """
+    # use try and except block. see: https://www.datacamp.com/tutorial/exception-handling-python 
+    try:
+        mysql_cursor.execute(query, (attendee_id, name, dob, gender, company_id))
+        mysql_conn.commit()
+        print("Attendee successfully added")
+    except mysql.connector.errors.IntegrityError:
+        print(f"*** ERROR *** Attendee ID: {attendee_id} already exists")
+    except Exception as e:
+        print(f"*** ERROR *** {e}")
 
-
+# Step 2.4: View connected attendees function
+def  view_connected_attendees():
+    
 # STEP 3: CREATE USER MENU
 # ADAPT FROMED: https://learn.modernagecoders.com/blog/how-to-build-menu-driven-program-in-python 
 def main():
