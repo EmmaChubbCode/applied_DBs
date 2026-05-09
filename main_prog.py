@@ -172,9 +172,10 @@ def get_connections(tx, attendee_id):
     query = """MATCH (a:Attendee {AttendeeID: $id})-[:CONNECTED_TO]-(b:Attendee) RETURN b.AttendeeID AS id """
     #  build an empty list to store the connected attendee IDs
     connections = []
+    results = tx.run(query, id=attendee_id)
     #loop through each row in the results and add the ID to the list
     # result['id'] accesses the 'id' alias we gave it in the RETURN clause above
-    for results in results:
+    for result in results:
         connections.append(result['id'])
     return connections
 
@@ -192,33 +193,35 @@ def view_connected_attendees():
             continue
 
             # convert to int now that we know its a valid number
-            attendee_id = int(attendee_id_input)
+        attendee_id = int(attendee_id_input)
 
             # before we check for connections, check that the valid number entered actually ecists in the database.
             # copy code from other functions/
-            mysql_cursor.execute("SELECT attendeeName FROM attendee WHERE attendeeID = %s", (attendee_id,))
-            attendee = mysql_cursor.fetchone()
+        mysql_cursor.execute("SELECT attendeeName FROM attendee WHERE attendeeID = %s", (attendee_id,))
+        attendee = mysql_cursor.fetchone()
 
         # if fetchone() returns None, the attendee doesnt exist in the DB
-            if not attendee:
-                print("*** ERROR *** Attendee does not exist")
-                continue
+        if not attendee:
+            print("*** ERROR *** Attendee does not exist")
+                # to fix the loop my code got stuck in
+            break
+
         # attendee exists - grab the name from index 0 of the tuple
-            attendee_name = attendee[0]
-            print(f"Attendee Name:  {attendee_name}")
-            print("--------------------")
+        attendee_name = attendee[0]
+        print(f"Attendee Name:  {attendee_name}")
+        print("--------------------")
 
             # now time to open the neo4j session
-            with neo4j_driver.session() as session:
+        with neo4j_driver.session() as session:
             # adapted from ger's code but passing my own help function
-                connections = sessopm.read_transaction(get_connections, attendee_id)
+            connections = session.execute_read(get_connections, attendee_id)
 
             # we've already checked for attendee in sql. now check if connections actually exist.
             # if connections variable above is None, print.
-            if not connections:
+        if not connections:
                 print("No connections")
-            else:
-                print("These attendees are connected:")
+        else:
+            print("These attendees are connected:")
             # loop through each connected attendee ID returned from Neo4j
             for connected_id in connections:
                 # look up the name of each connected attendee in MySQL
@@ -229,7 +232,7 @@ def view_connected_attendees():
                 # output on screen shoultd be the id and name
                 print(f"{connected_id} | {connected_name}")
             # break exits the while loop and returns the user to the main menu
-            break
+        break
 # STEP 3: CREATE USER MENU
 # ADAPT FROMED: https://learn.modernagecoders.com/blog/how-to-build-menu-driven-program-in-python 
 def main():
