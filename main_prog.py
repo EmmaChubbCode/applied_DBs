@@ -161,9 +161,75 @@ def add_new_attendee():
     except Exception as e:
         print(f"*** ERROR *** {e}")
 
+
 # Step 2.4: View connected attendees function
-def  view_connected_attendees():
-    
+# as per Ger's lecture notes, we need to make a helpr function that gets referred to inside the view_connected_attendees function.
+# adapted from python III lecture 
+def get_connections(tx, attendee_id):
+    # we're matching attendee to attendee, in any direction.
+    # # tx.run() executes the query, passing attendee_id as the $id parameter
+    # see https://neo4j.com/docs/api/python-driver/current/api.html#neo4j.Transaction.run 
+    query = """MATCH (a:Attendee {AttendeeID: $id})-[:CONNECTED_TO]-(b:Attendee) RETURN b.AttendeeID AS id """
+    #  build an empty list to store the connected attendee IDs
+    connections = []
+    #loop through each row in the results and add the ID to the list
+    # result['id'] accesses the 'id' alias we gave it in the RETURN clause above
+    for results in results:
+        connections.append(result['id'])
+    return connections
+
+def view_connected_attendees():
+# another while loop to keep asking til they enter something valuid as per specs 3.1.6.1
+    while True:
+        attendee_id_input = input("Attendee ID : ")
+
+        # first check its a valid attendee id (similar to view attendee)
+        # isdigit() checks the input is a whole number
+        # we dont accept negative numbers or text
+        if not attendee_id_input.isdigit():
+            print("*** ERROR *** Invalid attendee ID")
+            # once its valid, carry on with steps
+            continue
+
+            # convert to int now that we know its a valid number
+            attendee_id = int(attendee_id_input)
+
+            # before we check for connections, check that the valid number entered actually ecists in the database.
+            # copy code from other functions/
+            mysql_cursor.execute("SELECT attendeeName FROM attendee WHERE attendeeID = %s", (attendee_id,))
+            attendee = mysql_cursor.fetchone()
+
+        # if fetchone() returns None, the attendee doesnt exist in the DB
+            if not attendee:
+                print("*** ERROR *** Attendee does not exist")
+                continue
+        # attendee exists - grab the name from index 0 of the tuple
+            attendee_name = attendee[0]
+            print(f"Attendee Name:  {attendee_name}")
+            print("--------------------")
+
+            # now time to open the neo4j session
+            with neo4j_driver.session() as session:
+            # adapted from ger's code but passing my own help function
+                connections = sessopm.read_transaction(get_connections, attendee_id)
+
+            # we've already checked for attendee in sql. now check if connections actually exist.
+            # if connections variable above is None, print.
+            if not connections:
+                print("No connections")
+            else:
+                print("These attendees are connected:")
+            # loop through each connected attendee ID returned from Neo4j
+            for connected_id in connections:
+                # look up the name of each connected attendee in MySQL
+                # we do this because Neo4j only stores the ID, not the name
+                mysql_cursor.execute("SELECT attendeeName FROM attendee WHERE attendeeID = %s", (connected_id,))
+                # return whatever was fetched (first index so you avoid the comma i kept getting)
+                connected_name = mysql_cursor.fetchone()[0]
+                # output on screen shoultd be the id and name
+                print(f"{connected_id} | {connected_name}")
+            # break exits the while loop and returns the user to the main menu
+            break
 # STEP 3: CREATE USER MENU
 # ADAPT FROMED: https://learn.modernagecoders.com/blog/how-to-build-menu-driven-program-in-python 
 def main():
