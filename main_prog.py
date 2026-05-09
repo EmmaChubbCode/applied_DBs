@@ -233,6 +233,54 @@ def view_connected_attendees():
                 print(f"{connected_id} | {connected_name}")
             # break exits the while loop and returns the user to the main menu
         break
+# STEP 2.5: Add Connection function
+# first do helper function to write to neo4j, then the main function that gets called by the menu. adapted from ger's code and neo4j docs.
+def add_connection(tx, attendee_id1, attendee_id2):
+# I'm using the merge because it will or create the relationship. so first two steps look for the two inputted ids and if they don't exist, creates them.
+#  https://neo4j.com/docs/cypher-manual/current/clauses/merge/#:~:text=Merge%20on%20a%20relationship%20between,matched%20by%20the%20earlier%20MERGE%20. 
+# syntax for creating relationships found: https://neo4j.com/docs/cypher-manual/current/clauses/create/#create-relationships 
+   query = """
+        MERGE (a:Attendee {AttendeeID: $id1})
+        MERGE (b:Attendee {AttendeeID: $id2})
+        CREATE (a)-[:CONNECTED_TO]->(b)
+    """
+   # tx.run executes the query, passing both attendee IDs as parameters
+   tx.run(query, id1=attendee_id1, id2=attendee_id2)
+
+# helper function to check if connection already exists in either direction
+def check_connection(tx, attendee_id1, attendee_id2):
+    # the dash on both sides means we check both directions
+    query = """
+        MATCH (a:Attendee {AttendeeID: $id1})-[:CONNECTED_TO]-(b:Attendee {AttendeeID: $id2})
+        RETURN a
+    """
+    # re-use same check as get connections to loop through results and see if any come back. if they do, the connection already exists.
+    # adapted from ger's code.
+    results = tx.run(query, id1=attendee_id1, id2=attendee_id2)
+    connections = []
+    for result in results:
+        connections.append(result)
+    return connections
+
+def add_attendee_connection():
+    while True:
+        attendee_id1_input = input("Enter Attendee 1 ID : ")
+        attendee_id2_input = input("Enter Attendee 2 ID : ")
+
+         # validate both inputs are numeric
+        if not attendee_id1_input.isdigit() or not attendee_id2_input.isdigit():
+            print("*** ERROR *** Attendee IDs must be numbers")
+            continue
+
+        # turn user inpit into integers now we know they're valid numbers
+        attendee_id1 = int(attendee_id1_input)
+        attendee_id2 = int(attendee_id2_input)
+
+        # an attendee cannot be connected to themselves as per spec
+        if attendee_id1 == attendee_id2:
+            print("*** ERROR *** An attendee cannot connect to him/herself")
+            continue
+
 # STEP 3: CREATE USER MENU
 # ADAPT FROMED: https://learn.modernagecoders.com/blog/how-to-build-menu-driven-program-in-python 
 def main():
