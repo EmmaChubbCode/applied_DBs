@@ -249,12 +249,12 @@ def add_connection(tx, attendee_id1, attendee_id2):
 
 # helper function to check if connection already exists in either direction
 def check_connection(tx, attendee_id1, attendee_id2):
-    # the dash on both sides means we check both directions
+    # check if there's a connection in either direction between the two attendees.
     query = """
         MATCH (a:Attendee {AttendeeID: $id1})-[:CONNECTED_TO]-(b:Attendee {AttendeeID: $id2})
         RETURN a
     """
-    # re-use same check as get connections to loop through results and see if any come back. if they do, the connection already exists.
+    # put the user attendee ids into the query and see if any come back. if they do, the connection already exists.
     # adapted from ger's code.
     results = tx.run(query, id1=attendee_id1, id2=attendee_id2)
     connections = []
@@ -279,7 +279,37 @@ def add_attendee_connection():
         # an attendee cannot be connected to themselves as per spec
         if attendee_id1 == attendee_id2:
             print("*** ERROR *** An attendee cannot connect to him/herself")
+            continue # allow them to try again
+
+         # spe says if one of the attendees isnt in sql db, we don't add node.
+         # check for both and if one doesnt appear, return error.
+         # reuse code from view connected attendees function
+        mysql_cursor.execute("SELECT attendeeID FROM attendee WHERE attendeeID = %s", (attendee_id1,))
+        attendee1 = mysql_cursor.fetchone()
+        mysql_cursor.execute("SELECT attendeeID FROM attendee WHERE attendeeID = %s", (attendee_id2,))
+        attendee2 = mysql_cursor.fetchone()
+
+        if not attendee1 or not attendee2:
+            print("*** ERROR *** One or both attendee IDs do not exist")
             continue
+
+        # use helped function to check if connection already exists in neo4j. if it does, print error and allow them to try again.
+        with neo4j_driver.session() as session:
+            already_connected = session.execute_read(check_connection, attendee_id1, attendee_id2)
+
+        # if list is not empty, connection already exists
+        if already_connected:
+            print("*** ERROR *** These attendees are already connected")
+            continue
+
+        # if we get to this point, all checks have passed and we can add the connection in neo4j using the helper function.
+        with neo4j_driver.session() as session:
+            # use write_transaction as per ger's example of adding a student in topic python III.
+            session.execute_write(add_connection, attendee_id1, attendee_id2)
+        print("Connection successfully added")
+
+        print(f"Attendee {attendee_id1} is now connected to Attendee {attendee_id2}")
+        break
 
 # STEP 3: CREATE USER MENU
 # ADAPT FROMED: https://learn.modernagecoders.com/blog/how-to-build-menu-driven-program-in-python 
