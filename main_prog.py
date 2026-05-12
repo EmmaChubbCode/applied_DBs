@@ -24,7 +24,7 @@ mysql_cursor = mysql_conn.cursor()
 # import details from config.py and create driver for Neo4j connection
 # see https://neo4j.com/docs/api/python-driver/current/ 
 neo4j_driver = GraphDatabase.driver(
-    config.neo4j_uri, auth=(config.neo4j_user, config.neo4j_password)
+    config.neo4j_uri, auth=None
 )
 
 # STEP 2: start defining functions before they're called by main menu
