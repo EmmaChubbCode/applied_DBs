@@ -27,7 +27,6 @@ neo4j_driver = GraphDatabase.driver(
     config.neo4j_uri, auth=(config.neo4j_user, config.neo4j_password)
 )
 
-
 # STEP 2: start defining functions before they're called by main menu
 
 # STEP 2.1: CREATE VIEW SPEAKER FUNCTION
@@ -182,7 +181,7 @@ def get_connections(tx, attendee_id):
 def view_connected_attendees():
 # another while loop to keep asking til they enter something valuid as per specs 3.1.6.1
     while True:
-        attendee_id_input = input("Attendee ID : ")
+        attendee_id_input = input("Enter Attendee ID : ")
 
         # first check its a valid attendee id (similar to view attendee)
         # isdigit() checks the input is a whole number
@@ -306,10 +305,30 @@ def add_attendee_connection():
         with neo4j_driver.session() as session:
             # use write_transaction as per ger's example of adding a student in topic python III.
             session.execute_write(add_connection, attendee_id1, attendee_id2)
-        print("Connection successfully added")
-
         print(f"Attendee {attendee_id1} is now connected to Attendee {attendee_id2}")
         break
+
+# Step 2.6: View rooms function
+# we're going to store a snapshot of the rooms before the program is run. the program will then not refer to the actual db but to the cache.
+# this is to capture aspect of spec that says if someone manually enters a room, it shouldnt show up until they restart.
+rooms_cache = None
+
+def view_rooms():
+    # global keyword lets us modify the rooms_cache variable defined outside the function
+    # see https://www.w3schools.com/python/python_variables_global.asp
+    global rooms_cache
+
+    # only fetch from MySQL if we havent already basically
+    if rooms_cache is None:
+        mysql_cursor.execute("SELECT roomID, roomName, capacity FROM room")
+        rooms_cache = mysql_cursor.fetchall()
+
+    # print header
+    print(f"{'RoomID'} | {'RoomName'} | {'Capacity'}")
+
+    # loop through cached results and print each room
+    for roomID, roomName, capacity in rooms_cache:
+        print(f"{roomID} | {roomName} | {capacity}")
 
 # STEP 3: CREATE USER MENU
 # ADAPT FROMED: https://learn.modernagecoders.com/blog/how-to-build-menu-driven-program-in-python 
